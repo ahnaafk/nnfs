@@ -28,3 +28,4 @@ class_targets = np.array([
 
 correct_confidences = np.sum(softmax_outputs * class_targets, axis=1)
 neg_log2 = -np.log(correct_confidences)
+
