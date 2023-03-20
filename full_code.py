@@ -1,6 +1,6 @@
 import numpy as np
 import nnfs
-from nnfs.datasets import spiral_data
+from nnfs.datasets import spiral_data, vertical_data
 
 nnfs.init()
 
@@ -60,35 +60,68 @@ class Loss_CategorialCrossEntropy(Loss):
 
         return negative_log_likelihoods
 
-X, y = spiral_data(samples=100, classes=3)
+X, y = vertical_data(samples=100, classes=3)
 
 dense1 = Layer_Dense(2,3)
 activation1 = Activation_ReLU()
 
+#second layer
 dense2 = Layer_Dense(3,3)
 activation2 = Activation_Softmax()
 
 loss_function = Loss_CategorialCrossEntropy()
 
-#forward pass through first layer
-dense1.forward(X)
-activation1.forward(dense1.output) #forward pass wrapped in activation function
+lowest_loss = 99999999
+best_dense1_weights = dense1.weights.copy()
+best_dense1_biases = dense1.biases.copy()
+best_dense2_weights = dense2.weights.copy()
+best_dense2_biases = dense2.biases.copy()
 
-#forward pass through second layer
-dense2.forward(activation1.output)
-activation2.forward(dense2.output)
+for iteration in range(10000):
 
-print(activation2.output[:5])
+    dense1.weights += 0.05 * np.random.randn(2,3)
+    dense1.biases += 0.05 * np.random.randn(1,3)
+    dense2.weights += 0.05 * np.random.randn(3,3)
+    dense2.biases += 0.05 * np.random.randn(1,3)
 
-loss = loss_function.calculate(activation2.output, y)
-print(f"Loss: {loss}")
+    #forward pass through first layer
+    dense1.forward(X)
+    activation1.forward(dense1.output) #forward pass wrapped in activation function
+
+    #forward pass through second layer
+    dense2.forward(activation1.output)
+    activation2.forward(dense2.output)
+
+    loss = loss_function.calculate(activation2.output, y)
+
+    predictions = np.argmax(activation2.output, axis=1) #returns the indices of the highest confidence scores
+    if len(y.shape) == 2:
+        y = np.argmax(y, axis=1) #returns the indices of the target if one-hot encoded
+
+    #true yield 1, false yields 0. this checks if the indices match.
+    accuracy = np.mean(predictions==y)
+
+    if loss < lowest_loss:
+        print(f"""
+        New set of weights found, iteration: {iteration} \n
+        Loss: {loss} \n
+        Accuracy: {accuracy}""")
+
+        best_dense1_weights = dense1.weights.copy()
+        best_dense1_biases = dense1.biases.copy()
+        best_dense2_weights = dense2.weights.copy()
+        best_dense2_biases = dense2.biases.copy()
+        lowest_loss = loss
+        
+    else:
+        dense1.weights = best_dense1_weights.copy()
+        dense1.biases = best_dense1_biases.copy()
+        dense2.weights = best_dense2_weights.copy()
+        dense2.biases = best_dense2_biases.copy()
+
+        
 
 
-predictions = np.argmax(activation2.output, axis=1) #returns the indices of the highest confidence scores
-if len(y.shape) == 2:
-    y = np.argmax(y, axis=1) #returns the indices of the target if one-hot encoded
 
-#true yield 1, false yields 0. this checks if the indices match.
-accuracy = np.mean(predictions==y)
 
-print(f"acc: {accuracy}")
+        
